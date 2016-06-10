@@ -13,14 +13,21 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import rx.Observable;
+import rx.Subscription;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity implements ReposAdapter.Callback {
 
     private RecyclerView rvContainer;
+    private Subscription loadReposSubscription;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,24 +48,41 @@ public class MainActivity extends AppCompatActivity implements ReposAdapter.Call
         });
     }
 
-    private void loadReposByUsername(@NonNull  String username) {
-        Rest.INSTANCE.api().getReposByUsername(username)
-                .enqueue(new Callback<List<Repo>>() {
-                    @Override
-                    public void onResponse(Call<List<Repo>> call, Response<List<Repo>> response) {
-                        final ReposAdapter adapter = new ReposAdapter(response.body());
-                        adapter.setCallback(MainActivity.this);
-                        rvContainer.setAdapter(adapter);
-                    }
-
-                    @Override
-                    public void onFailure(Call<List<Repo>> call, Throwable t) {
-                        t.printStackTrace();
-                        Toast.makeText(MainActivity.this, "Have an error when load repo info: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
+    private void loadReposByUsername(@NonNull final String username) {
+        loadReposSubscription = Observable.fromCallable(new Callable<List<Repo>>() {
+            @Override
+            public List<Repo> call() throws Exception {
+                return Rest.INSTANCE.api().getReposByUsername(username).execute().body();
+            }
+        })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Action1<List<Repo>>() {
+                            @Override
+                            public void call(List<Repo> repos) {
+                                final ReposAdapter adapter = new ReposAdapter(repos);
+                                adapter.setCallback(MainActivity.this);
+                                rvContainer.setAdapter(adapter);
+                            }
+                        },
+                        new Action1<Throwable>() {
+                            @Override
+                            public void call(Throwable t) {
+                                t.printStackTrace();
+                                Toast.makeText(MainActivity.this, "Have an error when load repo info: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                );
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (loadReposSubscription.isUnsubscribed()) {
+            loadReposSubscription.unsubscribe();
+        }
+    }
 
     @Override
     public void onClickItem(int position, Repo repo) {
