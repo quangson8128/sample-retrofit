@@ -2,9 +2,9 @@ package vnzit.com.sampleretrofit;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
@@ -13,12 +13,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
@@ -28,6 +23,7 @@ public class MainActivity extends AppCompatActivity implements ReposAdapter.Call
 
     private RecyclerView rvContainer;
     private Subscription loadReposSubscription;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,12 +45,7 @@ public class MainActivity extends AppCompatActivity implements ReposAdapter.Call
     }
 
     private void loadReposByUsername(@NonNull final String username) {
-        loadReposSubscription = Observable.fromCallable(new Callable<List<Repo>>() {
-            @Override
-            public List<Repo> call() throws Exception {
-                return Rest.INSTANCE.api().getReposByUsername(username).execute().body();
-            }
-        })
+        Rest.INSTANCE.api().getReposByUsername(username)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
