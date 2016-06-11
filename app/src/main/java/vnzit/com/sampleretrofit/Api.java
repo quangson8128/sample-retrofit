@@ -5,6 +5,7 @@ import java.util.List;
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
+import rx.Observable;
 
 /**
  * Created by sh on 6/8/16.
@@ -12,7 +13,7 @@ import retrofit2.http.Path;
 public interface Api {
 
     @GET("/users/{username}/repos")
-    Call<List<Repo>> getReposByUsername(
+    Observable<List<Repo>> getReposByUsername(
             @Path("username") String username
     );
 
